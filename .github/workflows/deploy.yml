@@ -1,109 +1,134 @@
-
-name: Build and Deploy Story Web
+name: Build and Deploy Test Version
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
+
+  pull_request:
+    types:
+      - closed
 
 permissions:
   contents: read
 
 jobs:
-  build-and-deploy:
+
+  # ============================================================
+  # BUILD AND DEPLOY TEST VERSION
+  # Runs whenever a normal push is made to a non-main branch.
+  # ============================================================
+  deploy-test:
+    if: >
+      github.event_name == 'push' &&
+      github.event.deleted == false
+
     runs-on: ubuntu-latest
 
     steps:
-      # ==========================================
-      # Checkout StoryWeb source repository
-      # ==========================================
-      - name: Checkout source
+
+      # --------------------------------------------------------
+      # Checkout StoryWeb
+      # --------------------------------------------------------
+      - name: Checkout StoryWeb
         uses: actions/checkout@v4
 
-      # ==========================================
+      # --------------------------------------------------------
       # Setup Node.js
-      # ==========================================
+      # --------------------------------------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
           cache: npm
 
-      # ==========================================
+      # --------------------------------------------------------
       # Install dependencies
-      # ==========================================
+      # --------------------------------------------------------
       - name: Install dependencies
         run: npm ci
 
-      # ==========================================
-      # Build application
-      # ==========================================
-      - name: Build Story Web
+      # --------------------------------------------------------
+      # Determine the branch directory name
+      #
+      # Example:
+      # feature/town-system
+      #
+      # becomes:
+      # feature-town-system
+      # --------------------------------------------------------
+      # - name: Create branch directory name
+      #   id: branch
+      #   shell: bash
+      #   run: |
+      #     BRANCH_NAME="${GITHUB_REF_NAME}"
+
+      #     # Replace "/" and spaces with "-"
+      #     SAFE_NAME="${BRANCH_NAME//\//-}"
+      #     SAFE_NAME="${SAFE_NAME// /-}"
+
+      #     # Remove anything that is not a letter, number,
+      #     # period, underscore, or hyphen
+      #     SAFE_NAME=$(echo "$SAFE_NAME" | sed 's/[^a-zA-Z0-9._-]//g')
+
+      #     echo "Branch name: $BRANCH_NAME"
+      #     echo "Safe directory name: $SAFE_NAME"
+
+      #     echo "name=$SAFE_NAME" >> "$GITHUB_OUTPUT"
+
+      #     # Tell Vite where this test build will live
+      #     echo "VITE_BASE_PATH=/TinyRPG/Test/$SAFE_NAME/" >> "$GITHUB_ENV"
+
+      # --------------------------------------------------------
+      # Build StoryWeb
+      #
+      # Vite will use:
+      #
+      # /StoryWeb
+      #
+      # as its base path.
+      # --------------------------------------------------------
+      - name: Build StoryWeb
         run: npm run build
 
-      # ==========================================
-      # Checkout hosting repository
-      # ==========================================
-      - name: Checkout hosting repository
+      # --------------------------------------------------------
+      # Checkout website repository
+      # --------------------------------------------------------
+      - name: Checkout website repository
         uses: actions/checkout@v4
         with:
           repository: heheas/heheas.github.io
-          ref: main
           token: ${{ secrets.DEPLOY_TOKEN }}
-          path: hosting-repo
+          path: website
 
-      # ==========================================
-      # Publish build into /tools/StoryWeb
-      # ==========================================
-      - name: Publish build
+      # --------------------------------------------------------
+      # Replace this branch's deployment
+      # --------------------------------------------------------
+      - name: Replace branch deployment
         run: |
-          echo "Checking build output..."
+          BRANCH_DIR="website/tools/StoryWeb"
 
-          if [ ! -f dist/index.html ]; then
-            echo "ERROR: dist/index.html was not found!"
-            exit 1
-          fi
+          echo "Deploying to $BRANCH_DIR"
 
-          echo "Build contents:"
-          find dist -maxdepth 3 -type f
+          rm -rf "$BRANCH_DIR"
+          mkdir -p "$BRANCH_DIR"
 
-          echo "Preparing destination..."
-          mkdir -p hosting-repo/tools/StoryWeb
+          cp -R dist/. "$BRANCH_DIR/"
 
-          echo "Copying build..."
-          rsync -av --delete \
-            dist/ \
-            hosting-repo/tools/StoryWeb/
-
-          echo "Verifying destination..."
-          find hosting-repo/tools/StoryWeb -maxdepth 3 -type f
-
-      # ==========================================
-      # Commit and push deployment
-      # ==========================================
+      # --------------------------------------------------------
+      # Commit and push test deployment
+      # --------------------------------------------------------
       - name: Commit and push deployment
+        working-directory: website
         run: |
-          cd hosting-repo
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          echo "Checking deployment directory..."
-          ls -la tools/StoryWeb/
-
-          echo "Checking Git status..."
-          git status --short
-
-          echo "Adding deployment files..."
-          git add -f tools/StoryWeb/
-
-          echo "Checking staged changes..."
-          git status --short
+          git add StoryWeb
 
           if git diff --cached --quiet; then
             echo "No changes to deploy."
           else
-            git commit -m "Deploy Story Web"
-            git push origin main
+            git commit -m "Deploy latest StoryWeb"
+            git push
           fi
