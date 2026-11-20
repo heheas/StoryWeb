@@ -15,26 +15,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ==========================================
       # Checkout StoryWeb source repository
+      # ==========================================
       - name: Checkout source
         uses: actions/checkout@v4
 
+      # ==========================================
       # Setup Node.js
+      # ==========================================
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
+      # ==========================================
       # Install dependencies
+      # ==========================================
       - name: Install dependencies
         run: npm ci
 
+      # ==========================================
       # Build application
+      # ==========================================
       - name: Build Story Web
         run: npm run build
 
+      # ==========================================
       # Checkout hosting repository
+      # ==========================================
       - name: Checkout hosting repository
         uses: actions/checkout@v4
         with:
@@ -43,16 +53,35 @@ jobs:
           token: ${{ secrets.DEPLOY_TOKEN }}
           path: hosting-repo
 
+      # ==========================================
       # Publish build into /tools/StoryWeb
+      # ==========================================
       - name: Publish build
         run: |
+          echo "Checking build output..."
+
+          if [ ! -f dist/index.html ]; then
+            echo "ERROR: dist/index.html was not found!"
+            exit 1
+          fi
+
+          echo "Build contents:"
+          find dist -maxdepth 3 -type f
+
+          echo "Preparing destination..."
           mkdir -p hosting-repo/tools/StoryWeb
 
+          echo "Copying build..."
           rsync -av --delete \
             dist/ \
             hosting-repo/tools/StoryWeb/
 
+          echo "Verifying destination..."
+          find hosting-repo/tools/StoryWeb -maxdepth 3 -type f
+
+      # ==========================================
       # Commit and push deployment
+      # ==========================================
       - name: Commit and push deployment
         run: |
           cd hosting-repo
@@ -60,7 +89,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add tools/StoryWeb/
+          echo "Checking deployment directory..."
+          ls -la tools/StoryWeb/
+
+          echo "Checking Git status..."
+          git status --short
+
+          echo "Adding deployment files..."
+          git add -f tools/StoryWeb/
+
+          echo "Checking staged changes..."
+          git status --short
 
           if git diff --cached --quiet; then
             echo "No changes to deploy."
