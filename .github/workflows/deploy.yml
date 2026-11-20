@@ -1,0 +1,70 @@
+
+name: Build and Deploy Story Web
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout StoryWeb source
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # Build application
+      - name: Build Story Web
+        run: npm run build
+
+      # Checkout hosting repository
+      - name: Checkout hosting repository
+        uses: actions/checkout@v4
+        with:
+          repository: heheas/heheas.github.io
+          ref: main
+          token: ${{ secrets.DEPLOY_TOKEN }}
+          path: hosting-repo
+
+      # Publish build into /tools/StoryWeb
+      - name: Publish build
+        run: |
+          mkdir -p hosting-repo/tools/StoryWeb
+
+          rsync -av --delete \
+            dist/ \
+            hosting-repo/tools/StoryWeb/
+
+      # Commit and push deployment
+      - name: Commit and push deployment
+        run: |
+          cd hosting-repo
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add tools/StoryWeb/
+
+          if git diff --cached --quiet; then
+            echo "No changes to deploy."
+          else
+            git commit -m "Deploy Story Web"
+            git push origin main
+          fi
