@@ -41,21 +41,21 @@ jobs:
           repository: heheas/heheas.github.io
           ref: main
           token: ${{ secrets.DEPLOY_TOKEN }}
-          path: hosting-repo
+          path: heheas/StoryWeb
 
       # Publish build into /tools/StoryWeb
       - name: Publish build
         run: |
-          mkdir -p hosting-repo/tools/StoryWeb
+          mkdir -p heheas/heheas.github.io/tools/StoryWeb
 
           rsync -av --delete \
             dist/ \
-            hosting-repo/tools/StoryWeb/
+            heheas/heheas.github.io/tools/StoryWeb/
 
       # Commit and push deployment
       - name: Commit and push deployment
         run: |
-          cd hosting-repo
+          cd heheas/heheas.github.io
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
