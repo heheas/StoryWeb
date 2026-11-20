@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout StoryWeb source
+      # Checkout StoryWeb source repository
       - name: Checkout source
         uses: actions/checkout@v4
 
@@ -41,21 +41,21 @@ jobs:
           repository: heheas/heheas.github.io
           ref: main
           token: ${{ secrets.DEPLOY_TOKEN }}
-          path: heheas/StoryWeb
+          path: hosting-repo
 
       # Publish build into /tools/StoryWeb
       - name: Publish build
         run: |
-          mkdir -p heheas/heheas.github.io/tools/StoryWeb
+          mkdir -p hosting-repo/tools/StoryWeb
 
           rsync -av --delete \
             dist/ \
-            heheas/heheas.github.io/tools/StoryWeb/
+            hosting-repo/tools/StoryWeb/
 
       # Commit and push deployment
       - name: Commit and push deployment
         run: |
-          cd heheas/heheas.github.io
+          cd hosting-repo
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
