@@ -1,124 +1,42 @@
-import { useEffect, useState } from "react";
-import { Download, Menu, Moon, Plus, Redo2, Sun, Undo2, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Download, Menu, Moon, Plus, Redo2, Sun, Undo2, Upload, Trash2, GitBranch, Lightbulb, X, Check } from "lucide-react";
 import { StoryCanvas } from "./components/StoryCanvas";
 import { useAppStore } from "./store/useAppStore";
 import { useStoryStore } from "./store/useStoryStore";
+import { HERO_STAGES, type HeroStageId, type Relationship } from "./types";
+import { getDescendantIds, parseStoryDocument } from "./lib/storyModel";
+import { loadStory, saveStory } from "./lib/persistence";
 
-export default function App() {
-  const theme = useAppStore((state) => state.theme);
-  const toggleTheme = useAppStore((state) => state.toggleTheme);
-  const story = useStoryStore((state) => state.story);
-  const selectedNodeId = useStoryStore((state) => state.selectedNodeId);
-  const createRoot = useStoryStore((state) => state.createRoot);
-  const updateTitle = useStoryStore((state) => state.updateTitle);
-  const undo = useStoryStore((state) => state.undo);
-  const redo = useStoryStore((state) => state.redo);
-  const undoStackLength = useStoryStore((state) => state.undoStack.length);
-  const redoStackLength = useStoryStore((state) => state.redoStack.length);
-  const [titleDraft, setTitleDraft] = useState(story.title);
-
-  useEffect(() => setTitleDraft(story.title), [story.title]);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
-  }, [theme]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const isTyping = target?.matches("input, textarea, select, [contenteditable='true']");
-      if (isTyping || !(event.ctrlKey || event.metaKey)) return;
-      if (event.key.toLowerCase() === "z") {
-        event.preventDefault();
-        if (event.shiftKey) redo(); else undo();
-      } else if (event.key.toLowerCase() === "y") {
-        event.preventDefault();
-        redo();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [undo, redo]);
-
-  const hasStory = story.rootNodeId !== null;
-
-  return (
-    <main className="app-shell">
-      <header className="topbar">
-        <a className="brand" href="/" aria-label="Story Web home">
-          <span className="brand-mark" aria-hidden="true">✳</span>
-          <span className="brand-name">Story Web</span>
-        </a>
-
-        <div className="header-actions">
-          <button className="icon-button" type="button" title="Undo (Ctrl+Z)" aria-label="Undo" onClick={undo} disabled={undoStackLength === 0}>
-            <Undo2 size={17} />
-          </button>
-          <button className="icon-button" type="button" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" onClick={redo} disabled={redoStackLength === 0}>
-            <Redo2 size={17} />
-          </button>
-          <span className="header-divider" />
-          <button className="icon-button" type="button" title="Import story (Plan 6)" aria-label="Import story" disabled>
-            <Upload size={17} />
-          </button>
-          <button className="icon-button" type="button" title="Export story (Plan 6)" aria-label="Export story" disabled>
-            <Download size={17} />
-          </button>
-          <span className="header-divider" />
-          <button className="icon-button" type="button" onClick={toggleTheme} title={`Switch to ${theme === "light" ? "dark" : "light"} theme`} aria-label="Toggle theme">
-            {theme === "light" ? <Moon size={17} /> : <Sun size={17} />}
-          </button>
-          <button className="icon-button" type="button" title="More options (coming later)" aria-label="More options" disabled>
-            <Menu size={18} />
-          </button>
-        </div>
-      </header>
-
-      <section className="workspace">
-        <div className="canvas-heading">
-          <div className="story-heading-copy">
-            <p className="eyebrow">YOUR WRITING SPACE</p>
-            {hasStory ? (
-              <input
-                className="story-title-input"
-                aria-label="Story title"
-                value={titleDraft}
-                onChange={(event) => setTitleDraft(event.target.value)}
-                onBlur={() => updateTitle(titleDraft.trim() || "Untitled Story")}
-              />
-            ) : (
-              <>
-                <h1>A story takes shape.</h1>
-                <p className="subheading">Build a chain of moments, choices, and consequences.</p>
-              </>
-            )}
-            {hasStory && <p className="subheading">Select a beat to add the next moment in your story.</p>}
-          </div>
-          <button className="quiet-button" type="button" onClick={createRoot} disabled={hasStory} title={hasStory ? "A story is already started" : "Create your first story beat"}>
-            <Plus size={16} /> {hasStory ? "Story started" : "Start story"}
-          </button>
-        </div>
-        <div className="canvas-frame">
-          <StoryCanvas />
-          {!hasStory && (
-            <div className="canvas-empty-note">
-              <span className="empty-symbol">✳</span>
-              <p>Start with the moment that begins it all.</p>
-              <span>Then select the node and add what happens therefore — or what gets in the way.</span>
-              <button className="empty-start-button" type="button" onClick={createRoot}>Create first story beat</button>
-            </div>
-          )}
-        </div>
-        <div className="canvas-helper-row">
-          <span>{story.nodes.length} {story.nodes.length === 1 ? "story beat" : "story beats"}</span>
-          <span>{selectedNodeId ? "Selected beat · Ctrl+Enter saves text" : "Select a beat to continue the story"}</span>
-        </div>
-      </section>
-      <footer className="statusbar">
-        <span>STORY WEB <span className="status-dot" /> PLAN 2 · STORY BUILDING</span>
-        <span>Undo history: {undoStackLength} / 100</span>
-      </footer>
-    </main>
-  );
+export default function App(){
+ const theme=useAppStore(s=>s.theme),toggleTheme=useAppStore(s=>s.toggleTheme);const story=useStoryStore(s=>s.story),selected=useStoryStore(s=>s.selectedNodeId);const createRoot=useStoryStore(s=>s.createRoot),updateTitle=useStoryStore(s=>s.updateTitle),undo=useStoryStore(s=>s.undo),redo=useStoryStore(s=>s.redo),assignStage=useStoryStore(s=>s.assignStage),toggleBlocked=useStoryStore(s=>s.toggleWriterBlocked),deleteNode=useStoryStore(s=>s.deleteNode),reparentNode=useStoryStore(s=>s.reparentNode),addChild=useStoryStore(s=>s.addChild),importStory=useStoryStore(s=>s.importStory);
+ const undoCount=useStoryStore(s=>s.undoStack.length),redoCount=useStoryStore(s=>s.redoStack.length);const [titleDraft,setTitleDraft]=useState(story.title),[expanded,setExpanded]=useState<string[]>([HERO_STAGES[0].id]),[parentDialog,setParentDialog]=useState(false),[newParent,setNewParent]=useState(""),[moveMode,setMoveMode]=useState<"leave"|"move">("move"),[relationship,setRelationship]=useState<Relationship>("therefore"),[menuOpen,setMenuOpen]=useState(false),[notice,setNotice]=useState("Saved locally"),[writerOpen,setWriterOpen]=useState(false);const fileRef=useRef<HTMLInputElement>(null);
+ useEffect(()=>setTitleDraft(story.title),[story.title]);useEffect(()=>{document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;},[theme]);
+ useEffect(()=>{let active=true;loadStory().then(saved=>{if(active&&saved&&saved.nodes.length){try{const valid=parseStoryDocument(saved);const current=useStoryStore.getState().story;if(!current.nodes.length)useStoryStore.getState().importStory(valid);}catch{/* Ignore invalid autosave data; the user can import a backup file. */}}});return()=>{active=false;};},[]);
+ useEffect(()=>{const t=window.setTimeout(()=>{saveStory(story).then(()=>setNotice("Saved locally")).catch(()=>setNotice("Autosave unavailable"));},350);return()=>window.clearTimeout(t);},[story]);
+ useEffect(()=>{const onKey=(e:KeyboardEvent)=>{const target=e.target as HTMLElement|null;if(target?.matches("input,textarea,select,[contenteditable='true']")||!(e.ctrlKey||e.metaKey))return;if(e.key.toLowerCase()==="z"){e.preventDefault();e.shiftKey?redo():undo();}else if(e.key.toLowerCase()==="y"){e.preventDefault();redo();}};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey);},[undo,redo]);
+ const selectedNode=story.nodes.find(n=>n.id===selected);const descendants=useMemo(()=>selected?getDescendantIds(story,selected):new Set<string>(),[story,selected]);const validParents=story.nodes.filter(n=>n.id!==selected&&!descendants.has(n.id));
+ const toggleStage=(id:string)=>setExpanded(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
+ const exportFile=()=>{const blob=new Blob([JSON.stringify(story,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${(story.title||"story").replace(/[^a-z0-9-_]+/gi,"-")}.story`;a.click();URL.revokeObjectURL(url);setMenuOpen(false);};
+ const importFile=async(file?:File)=>{if(!file)return;try{const parsed=parseStoryDocument(JSON.parse(await file.text()));if(!window.confirm("Import this story and replace the current canvas? Your current story will be replaced."))return;importStory(parsed);setNotice("Story imported");}catch(e){window.alert(`Could not import story: ${e instanceof Error?e.message:"Invalid file"}`);}finally{if(fileRef.current)fileRef.current.value="";}};
+ const openReparent=()=>{if(!selectedNode)return;setNewParent(validParents.find(n=>n.id!==story.rootNodeId)?.id??validParents[0]?.id??"");setRelationship(story.edges.find(e=>e.target===selected)?.relationship??"therefore");setParentDialog(true);};
+ const applyReparent=()=>{if(!selected||!newParent)return;try{reparentNode(selected,newParent,moveMode,relationship);setParentDialog(false);}catch(e){window.alert(e instanceof Error?e.message:"Could not move node");}};
+ const suggestions=selectedNode?[
+  {kind:"therefore" as const,text:selectedNode.content?`As a result of this, ${selectedNode.content.toLowerCase().replace(/[.!?]+$/g,"")} changes the situation in an unexpected way.`:"Show the immediate consequence of this moment, and how it changes the hero's next choice."},
+  {kind:"but" as const,text:"Introduce a complication that makes the hero's goal harder, forcing a difficult choice."},
+  {kind:"therefore" as const,text:"Let a decision here create a new opportunity, but require the hero to give something up."},
+  {kind:"but" as const,text:"Reveal information that changes how the hero understands what just happened."}
+ ]:[];
+ const hasStory=!!story.rootNodeId;
+ return <main className="app-shell">
+  <header className="topbar"><a className="brand" href="#" aria-label="Story Web home"><span className="brand-mark">✳</span><span className="brand-name">Story Web</span></a><div className="header-actions"><button className="icon-button" title="Undo (Ctrl+Z)" aria-label="Undo" onClick={undo} disabled={!undoCount}><Undo2 size={17}/></button><button className="icon-button" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" onClick={redo} disabled={!redoCount}><Redo2 size={17}/></button><span className="header-divider"/><div className="menu-wrap"><button className="icon-button" aria-label="File menu" onClick={()=>setMenuOpen(v=>!v)}><Menu size={18}/></button>{menuOpen&&<div className="file-menu"><button onClick={exportFile}><Download size={15}/> Export .story</button><button onClick={()=>{fileRef.current?.click();setMenuOpen(false);}}><Upload size={15}/> Import .story / .json</button></div>}</div><input ref={fileRef} type="file" accept=".story,.json,application/json" hidden onChange={e=>void importFile(e.target.files?.[0])}/><span className="header-divider"/><button className="icon-button" onClick={toggleTheme} title="Toggle theme" aria-label="Toggle theme">{theme==="light"?<Moon size={17}/>:<Sun size={17}/>}</button></div></header>
+  <div className="workspace-layout"><section className="workspace"><div className="canvas-heading"><div className="story-heading-copy"><p className="eyebrow">YOUR WRITING SPACE</p>{hasStory?<input className="story-title-input" aria-label="Story title" value={titleDraft} onChange={e=>setTitleDraft(e.target.value)} onBlur={()=>updateTitle(titleDraft.trim()||"Untitled Story")}/>:<><h1>A story takes shape.</h1><p className="subheading">Build a chain of moments, choices, and consequences.</p></>}{hasStory&&<p className="subheading">Select a beat to add the next moment in your story.</p>}</div><button className="quiet-button" onClick={createRoot} disabled={hasStory}><Plus size={16}/>{hasStory?"Story started":"Start story"}</button></div>
+   {selectedNode&&<div className="selection-toolbar"><span className="toolbar-label">SELECTED BEAT</span><button onClick={openReparent} disabled={selectedNode.id===story.rootNodeId} title={selectedNode.id===story.rootNodeId?"The root beat cannot be reparented":"Change this beat’s parent"}><GitBranch size={14}/> Change parent</button><label className="stage-quick-label">Journey stage<select aria-label="Assign Hero's Journey stage" value={selectedNode.heroJourneyStage??""} onChange={e=>assignStage(selectedNode.id,(e.target.value||undefined) as HeroStageId|undefined)}><option value="">Unassigned</option>{HERO_STAGES.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><button onClick={()=>{toggleBlocked(selectedNode.id);setWriterOpen(true);}}><Lightbulb size={14}/>{selectedNode.writerBlocked?"Writer's Block on":"Writer's Block"}</button><button className="danger-action" onClick={()=>{if(window.confirm("Delete this beat and all of its descendants?"))deleteNode(selectedNode.id);}}><Trash2 size={14}/> Delete</button></div>}
+   <div className="canvas-frame"><StoryCanvas/>{!hasStory&&<div className="canvas-empty-note"><span className="empty-symbol">✳</span><p>Start with the moment that begins it all.</p><span>Then select the node and add what happens therefore — or what gets in the way.</span><button className="empty-start-button" onClick={createRoot}>Create first story beat</button></div>}</div>
+   <div className="canvas-helper-row"><span>{story.nodes.length} {story.nodes.length===1?"story beat":"story beats"}</span><span>{notice} · {selected?"Selected beat":"Select a beat to continue"}</span></div>
+   {selectedNode&&selectedNode.writerBlocked&&writerOpen&&<section className="writer-panel"><div className="writer-panel-head"><div><span className="eyebrow">WRITER'S BLOCK · MOCK SUGGESTIONS</span><h3>Try a next beat</h3></div><button className="icon-button" onClick={()=>setWriterOpen(false)} aria-label="Collapse suggestions"><X size={16}/></button></div><p>These sample prompts use the selected beat as a cue. No AI service is connected.</p><div className="suggestion-list">{suggestions.map((s,i)=><div className="suggestion-row" key={i}><span className={s.kind}>{s.kind=== "therefore"?"THEREFORE":"BUT"}</span><p>{s.text}</p><button onClick={()=>{addChild(selectedNode.id,s.kind);setWriterOpen(false);}}>Add beat</button></div>)}</div></section>}
+  </section>
+  <aside className="journey-sidebar"><div className="sidebar-title"><div><p className="eyebrow">STORY STRUCTURE</p><h2>Hero's Journey</h2></div><span className="stage-count">{story.nodes.filter(n=>n.heroJourneyStage).length}/{story.nodes.length}</span></div><p className="sidebar-intro">Assign beats to the stages of your hero's transformation.</p><div className="journey-stage-list">{HERO_STAGES.map((stage,index)=>{const nodes=story.nodes.filter(n=>n.heroJourneyStage===stage.id);const open=expanded.includes(stage.id);return <section className={`journey-stage${open?" expanded":""}`} key={stage.id}><button className="journey-stage-head" onClick={()=>toggleStage(stage.id)}><span className="stage-index" style={{background:stage.color}}>{index+1}</span><span className="stage-name">{stage.name}<small>{nodes.length?`${nodes.length} beat${nodes.length===1?"":"s"}`:"No beats assigned"}</small></span><span className="stage-check">{nodes.length?"✓":"·"}</span><span className="stage-chevron">{open?"−":"+"}</span></button>{open&&<div className="stage-detail"><p>{stage.description}</p>{nodes.map(n=><button className="stage-node-link" key={n.id} onClick={()=>useStoryStore.getState().selectNode(n.id)}><span/>{n.content.trim()||"Untitled beat"}</button>)}</div>}</section>;})}</div></aside></div>
+  <footer className="statusbar"><span>STORY WEB <span className="status-dot"/> COMPLETE WORKSPACE</span><span>Undo history: {undoCount}/100</span></footer>
+  {parentDialog&&selectedNode&&<div className="modal-backdrop" role="presentation"><section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="parent-modal-title"><div className="modal-heading"><div><p className="eyebrow">RESTRUCTURE STORY</p><h2 id="parent-modal-title">Change parent beat</h2></div><button className="icon-button" onClick={()=>setParentDialog(false)} aria-label="Close"><X size={17}/></button></div><label className="field-label">New parent<select value={newParent} onChange={e=>setNewParent(e.target.value)}>{validParents.map(n=><option key={n.id} value={n.id}>{n.content.trim()||"Untitled beat"}</option>)}</select></label><div className="field-label">What should happen to its children?</div><label className={`choice-card${moveMode==="leave"?" active":""}`}><input type="radio" checked={moveMode==="leave"} onChange={()=>setMoveMode("leave")}/><span><b>Leave children behind</b><small>Keep descendants in place and insert an empty placeholder where this beat was.</small></span></label><label className={`choice-card${moveMode==="move"?" active":""}`}><input type="radio" checked={moveMode==="move"} onChange={()=>setMoveMode("move")}/><span><b>Move children with node</b><small>Move this beat and its entire descendant branch together.</small></span></label><label className="field-label">Relationship to new parent<select value={relationship} onChange={e=>setRelationship(e.target.value as Relationship)}><option value="therefore">Therefore</option><option value="but">But</option></select></label><div className="modal-actions"><button className="quiet-button" onClick={()=>setParentDialog(false)}>Cancel</button><button className="primary-button" onClick={applyReparent} disabled={!newParent}><Check size={15}/> Apply change</button></div></section></div>}
+ </main>;
 }
