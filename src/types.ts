@@ -1,6 +1,9 @@
 import type { Edge, Node } from "@xyflow/react";
 export type Relationship = "therefore" | "but";
+<<<<<<< HEAD
 export type NarrativeRelationship = "foreshadowing" | "callback";
+=======
+>>>>>>> 78c06f45815cd7eccfc329883fefb1fd7094890e
 export const HERO_STAGES = [
   { id: "ordinary-world", name: "Ordinary World", color: "#8b9aa8", description: "Introduce the hero's everyday life." },
   { id: "call-to-adventure", name: "Call to Adventure", color: "#d6a84b", description: "Something disrupts the ordinary world." },
@@ -18,14 +21,8 @@ export const HERO_STAGES = [
 export type HeroStageId = typeof HERO_STAGES[number]["id"];
 export interface StoryNode { id: string; content: string; position: { x: number; y: number }; siblingOrder: number; heroJourneyStage?: HeroStageId; writerBlocked?: boolean; }
 export interface StoryEdge { id: string; source: string; target: string; relationship: Relationship; }
-export interface NarrativeLink { id: string; source: string; target: string; relationship: NarrativeRelationship; }
-export interface StoryDocument { version: 1; title: string; rootNodeId: string | null; nodes: StoryNode[]; edges: StoryEdge[]; narrativeLinks?: NarrativeLink[]; }
+export interface StoryDocument { version: 1; title: string; rootNodeId: string | null; nodes: StoryNode[]; edges: StoryEdge[]; }
 export interface StoryNodeViewData extends Record<string, unknown> { content: string; isOnPath: boolean; stageColor?: string; }
-export interface StoryEdgeViewData extends Record<string, unknown> {
-  relationship: Relationship | NarrativeRelationship;
-  isOnPath: boolean;
-  narrative?: boolean;
-  selected?: boolean;
-}
+export interface StoryEdgeViewData extends Record<string, unknown> { relationship: Relationship; isOnPath: boolean; }
 export type StoryFlowNode = Node<StoryNodeViewData, "story">;
 export type StoryFlowEdge = Edge<StoryEdgeViewData, "story">;

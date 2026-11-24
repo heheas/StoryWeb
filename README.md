@@ -5,11 +5,10 @@ A local-first interactive story-web editor built with React, TypeScript, Vite, Z
 ## Included
 
 - **Navigation and restructuring:** canvas pan/zoom, fit-to-view, zoom percentage, center selected beat, contextual actions, delete branch, parent reassignment, drag-to-reconnect parent edges, cycle prevention, and atomic undo/redo history.
-- **Hero's Journey:** all 12 stages, centralized stage names/colors/descriptions, per-node mountain-menu assignment, colored assignment borders, a numbered navigation overview, collapsible sidebar, beat counts, and navigation to assigned beats.
-- **Narrative links:** independent directional Foreshadowing/Callback links, dashed side-to-side connections, automatic ancestor/descendant direction, editing/deletion, duplicate validation, and reparent direction review.
+- **Hero's Journey:** all 12 stages, centralized stage names/colors/descriptions, stage assignment, collapsible sidebar, beat counts, and navigation to assigned beats.
 - **Writer's Block (mock only):** sample Therefore/But suggestions based on the selected beat, with an Add Beat action. There is no LLM, API client, backend, prompt submission, or API key handling in this build.
 - **Saving and files:** IndexedDB autosave (localStorage fallback), `.story` JSON export, `.story`/`.json` import, validation, and confirmation before replacing the current story.
-- **Polish:** fixed header, responsive slide-out navigation drawer, touch-friendly canvas controls, light/dark theme, keyboard undo/redo, and unit tests for narrative-link direction and validation.
+- **Polish:** responsive sidebar/workspace, light/dark theme, keyboard undo/redo, and restructuring unit tests.
 
 ## Requirements
 
@@ -44,23 +43,8 @@ export default defineConfig({
 
 ## Notes
 
-- Story documents are versioned (`version: 1`) and validated before import. Existing version-1 `.story` files without `narrativeLinks` remain importable; new exports include narrative links.
+- Story documents are versioned (`version: 1`) and validated before import.
 - A single reparent operation is one undo entry, including the selected children-handling mode.
 - “Leave children behind” inserts an empty placeholder at the old location and reconnects the former direct children to it.
 - Deleting a non-root beat deletes its full descendant branch. Deleting the root resets the story to an empty document.
 - This ZIP is a source project. Run `npm install` before the first build; dependency installation/build verification was not possible in the packaging environment because the npm registry request timed out.
-
-
-## Relationship behavior
-
-- Hierarchy edges use `hierarchy-out` (bottom) to `hierarchy-in` (top) handles and remain the only edges used by the automatic layout.
-- Narrative links use `narrative-out` (right) to `narrative-in` (left) handles. Foreshadowing arrows point from earlier to later; Callback arrows point from later to earlier.
-- Narrative links are stored separately in `narrativeLinks`. Old version-1 story files without that property are normalized to an empty list when imported.
-- Selecting a narrative edge exposes its relationship selector and delete action in the contextual toolbar.
-- Reparenting reviews links whose ancestor/descendant relationship changes. Confirmed direction updates are committed in the same undo history entry as the reparent operation.
-
-## Verification status
-
-- TypeScript/TSX syntax transpilation: passed.
-- Story-model smoke checks: passed for direction rules, validation, cascade deletion, reparent review detection, and legacy import compatibility.
-- Full `npm run typecheck`, `npm test`, and `npm run build`: not completed because dependency installation timed out in this environment. Run `npm install` followed by the commands above locally before deployment.
