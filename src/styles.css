@@ -255,3 +255,82 @@ h1 { margin: 0; font-size: clamp(24px, 3vw, 32px); line-height: 1.2; font-weight
 :root[data-theme="dark"]{--panel:#252927;--hover:#303d35}
 
 .stage-check{font-size:12px;color:var(--accent);font-weight:700;min-width:10px;text-align:center}
+
+
+/* Relationship and navigation enhancements */
+.app-shell{height:100dvh;min-height:0;overflow:hidden}
+.topbar{position:sticky;top:0;z-index:60;flex:none}
+.workspace-layout{flex:1;min-height:0;overflow:hidden;grid-template-columns:minmax(0,1fr) 292px;padding:14px 18px 12px}
+.workspace{padding:0;min-height:0;overflow:auto}
+.canvas-frame{min-height:260px;flex:1}
+.journey-sidebar{min-height:0;max-height:none;display:flex;flex-direction:column}
+.sidebar-collapsed{grid-template-columns:minmax(0,1fr)}
+.sidebar-collapsed .workspace{grid-column:1/-1}
+.mobile-close{display:none}
+.story-node-topline{display:flex;align-items:center;justify-content:space-between;min-height:20px}
+.story-node-kicker{margin-bottom:7px}
+.node-stage-button{width:25px;height:25px;display:grid;place-items:center;border:0;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer}
+.node-stage-button:hover,.node-stage-button:focus-visible{background:var(--surface-muted);color:var(--text)}
+.node-stage-menu{position:absolute;z-index:30;right:8px;top:35px;width:205px;max-height:245px;overflow:auto;padding:7px;border:1px solid var(--border);border-radius:9px;background:var(--panel);box-shadow:0 8px 24px #0002}
+.node-stage-menu-title{padding:5px 7px 8px;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.node-stage-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:6px;border:0;border-radius:5px;background:transparent;color:var(--text);font-size:10px;text-align:left;cursor:pointer}
+.node-stage-menu button:hover{background:var(--hover)}
+.node-stage-menu button span{display:grid;place-items:center;width:19px;height:19px;border-radius:50%;color:white;font-size:9px;font-weight:700;flex:none}
+.node-stage-menu .remove-stage{margin-top:5px;border-top:1px solid var(--border);border-radius:0;color:#b75f59}
+.story-handle{z-index:5}
+.hierarchy-handle{background:#8a9b90!important}
+.narrative-handle{width:9px!important;height:9px!important;background:#9672b8!important;border:2px solid var(--surface)!important}
+.story-edge-label.foreshadowing{color:#9672b8}
+.story-edge-label.callback{color:#648fc2}
+.narrative-edge-label{font-size:8px;letter-spacing:.45px}
+.journey-overview{position:relative;display:grid;place-items:center;min-height:116px;margin:8px 0 3px;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.journey-mountain{position:absolute;z-index:1;display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--border);border-radius:50%;background:var(--panel);color:var(--accent);pointer-events:none}
+.stage-circles{width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:7px;justify-items:center}
+.stage-circle{position:relative;z-index:2;width:26px;height:26px;border:0;border-radius:50%;background:var(--stage-color);color:white;font-size:10px;font-weight:750;cursor:pointer;box-shadow:0 0 0 2px var(--panel)}
+.stage-circle:hover,.stage-circle:focus-visible{transform:scale(1.12);outline:2px solid var(--stage-color);outline-offset:2px}
+.stage-circle-tooltip{position:absolute;left:50%;bottom:calc(100% + 7px);transform:translateX(-50%);display:none;white-space:nowrap;padding:5px 7px;border:1px solid var(--border);border-radius:5px;background:var(--panel);color:var(--text);font-size:10px;font-weight:500;box-shadow:0 3px 12px #0002}
+.stage-circle:hover .stage-circle-tooltip,.stage-circle:focus-visible .stage-circle-tooltip{display:block}
+.journey-stage{scroll-margin:12px}
+.journey-stage:target{background:var(--hover)}
+.narrative-link-description{font-size:10px;color:var(--muted)}
+.modal-help{font-size:11px;color:var(--muted);line-height:1.5}
+@media(max-width:900px){
+ .workspace-layout{display:flex;position:relative;padding:10px;overflow:hidden}
+ .workspace{width:100%;flex:1}
+ .journey-sidebar{position:absolute;z-index:45;top:8px;bottom:8px;right:8px;width:min(330px,calc(100% - 16px));max-height:none;box-shadow:0 12px 35px #0003}
+ .mobile-close{display:inline-grid}
+ .journey-overview{min-height:106px}
+}
+@media(max-width:560px){
+ .app-shell{height:100dvh}
+ .topbar{height:54px;padding:0 9px}
+ .brand{gap:6px}.brand-name{font-size:16px}
+ .header-actions{gap:1px}
+ .header-divider{margin:0 2px}
+ .workspace-layout{padding:7px}
+ .workspace{min-height:0}
+ .canvas-heading{margin-bottom:9px}
+ .canvas-heading .eyebrow{margin-bottom:4px}
+ .story-title-input{font-size:23px}
+ .selection-toolbar{margin-bottom:7px;padding:7px;max-height:110px;overflow:auto}
+ .selection-toolbar button{padding:7px;font-size:10px}
+ .canvas-frame{min-height:250px}
+ .story-node{width:230px;min-height:128px;padding:10px}
+ .story-node-input{font-size:11px;min-height:55px}
+ .story-node-actions button{padding:6px;font-size:9px}
+ .canvas-helper-row{padding-top:6px}
+ .journey-sidebar{width:min(320px,calc(100% - 12px));right:6px;top:6px;bottom:6px;padding:13px 11px}
+ .statusbar{min-height:28px;padding:0 9px;font-size:8px}
+ .canvas-zoom-tools{top:6px;right:6px}
+ .canvas-zoom-tools button{padding:6px}
+ .modal-backdrop{align-items:flex-end;padding:8px}
+ .modal-card{max-height:88dvh;overflow:auto;border-radius:14px 14px 8px 8px}
+}
+
+@media(max-width:900px){.stage-circle-tooltip.visible{display:block}}
+
+@media(max-width:900px){
+ .stage-circle{width:34px;height:34px;font-size:11px}
+ .node-stage-button{width:32px;height:32px}
+ .story-node-actions button{min-height:32px}
+}
