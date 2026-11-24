@@ -1,20 +1,27 @@
-# Story Web — Plan 2: Core Story Web and History
+# Story Web — Complete Workspace (Plans 3–7)
 
-Built on the Foundation project with React, TypeScript, Vite, Zustand, XYFlow, Tailwind CSS, and Lucide icons.
+A local-first interactive story-web editor built with React, TypeScript, Vite, Zustand, and XYFlow.
+
+## Included
+
+- **Navigation and restructuring:** canvas pan/zoom, fit-to-view, zoom percentage, center selected beat, contextual actions, delete branch, parent reassignment, drag-to-reconnect parent edges, cycle prevention, and atomic undo/redo history.
+- **Hero's Journey:** all 12 stages, centralized stage names/colors/descriptions, per-node mountain-menu assignment, colored assignment borders, a numbered navigation overview, collapsible sidebar, beat counts, and navigation to assigned beats.
+- **Narrative links:** independent directional Foreshadowing/Callback links, dashed side-to-side connections, automatic ancestor/descendant direction, editing/deletion, duplicate validation, and reparent direction review.
+- **Writer's Block (mock only):** sample Therefore/But suggestions based on the selected beat, with an Add Beat action. There is no LLM, API client, backend, prompt submission, or API key handling in this build.
+- **Saving and files:** IndexedDB autosave (localStorage fallback), `.story` JSON export, `.story`/`.json` import, validation, and confirmation before replacing the current story.
+- **Polish:** fixed header, responsive slide-out navigation drawer, touch-friendly canvas controls, light/dark theme, keyboard undo/redo, and unit tests for narrative-link direction and validation.
 
 ## Requirements
 
-- Node.js 20.19+ or 22.12+
+- Node.js 20 or newer
 - npm
 
-## Install and run
+## Run locally
 
 ```bash
 npm install
 npm run dev
 ```
-
-Open the local URL printed by Vite.
 
 ## Verify
 
@@ -24,36 +31,36 @@ npm test
 npm run build
 ```
 
-`npm install` creates `package-lock.json`. Commit that file to the repository so GitHub Actions can use `npm ci` reliably.
+## Deployment base path
 
-## Implemented in Plan 2
+Set Vite's `base` to the path where this app is hosted. For example, for `https://example.com/tools/StoryWeb/`:
 
-- Story document model with title, root node, story beats, and Therefore/But connections
-- Create the first/root story beat
-- Add multiple Therefore and But children to a selected node
-- Edit story beat text; each completed edit is one undoable action
-- Edit story title; each completed title edit is one undoable action
-- Automatically arranged top-down tree layout, with sibling branches arranged horizontally
-- Selected node and its full ancestor path highlighted
-- Centralized Zustand story state, separate from canvas rendering
-- Snapshot-based undo/redo history, capped at 100 operations
-- Keyboard shortcuts: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, and Ctrl/Cmd+Y
-- New changes after undo clear redo history
-- Story graph validation for unique IDs, one parent per non-root node, valid references, root integrity, and cycles
-- Unit tests for the story model and layout rules
-- Existing light/dark theme and canvas controls retained
-
-## Not implemented yet
-
-- Reparenting, connector dragging, delete controls, and child-handling choices (Plan 3)
-- Hero's Journey sidebar and assignments (Plan 4)
-- Writer's Block suggestions and LLM integration (Plan 5)
-- Autosave, import, and export (Plan 6)
-- Full accessibility and performance pass (Plan 7)
+```ts
+export default defineConfig({
+  base: "/tools/StoryWeb/",
+  plugins: [react(), tailwindcss()],
+});
+```
 
 ## Notes
 
-- Story data is the source of truth; XYFlow is used to render and navigate it.
-- Node positions are calculated by the hierarchical layout and are not manually draggable in this phase.
-- Text edits are committed on blur or Ctrl/Cmd+Enter, rather than creating a history entry for each keystroke.
-- UI-only state such as selection and viewport movement is not included in story history.
+- Story documents are versioned (`version: 1`) and validated before import. Existing version-1 `.story` files without `narrativeLinks` remain importable; new exports include narrative links.
+- A single reparent operation is one undo entry, including the selected children-handling mode.
+- “Leave children behind” inserts an empty placeholder at the old location and reconnects the former direct children to it.
+- Deleting a non-root beat deletes its full descendant branch. Deleting the root resets the story to an empty document.
+- This ZIP is a source project. Run `npm install` before the first build; dependency installation/build verification was not possible in the packaging environment because the npm registry request timed out.
+
+
+## Relationship behavior
+
+- Hierarchy edges use `hierarchy-out` (bottom) to `hierarchy-in` (top) handles and remain the only edges used by the automatic layout.
+- Narrative links use `narrative-out` (right) to `narrative-in` (left) handles. Foreshadowing arrows point from earlier to later; Callback arrows point from later to earlier.
+- Narrative links are stored separately in `narrativeLinks`. Old version-1 story files without that property are normalized to an empty list when imported.
+- Selecting a narrative edge exposes its relationship selector and delete action in the contextual toolbar.
+- Reparenting reviews links whose ancestor/descendant relationship changes. Confirmed direction updates are committed in the same undo history entry as the reparent operation.
+
+## Verification status
+
+- TypeScript/TSX syntax transpilation: passed.
+- Story-model smoke checks: passed for direction rules, validation, cascade deletion, reparent review detection, and legacy import compatibility.
+- Full `npm run typecheck`, `npm test`, and `npm run build`: not completed because dependency installation timed out in this environment. Run `npm install` followed by the commands above locally before deployment.

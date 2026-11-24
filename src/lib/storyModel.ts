@@ -1,146 +1,62 @@
-import type { Relationship, StoryDocument, StoryEdge, StoryNode } from "../types";
-
-export const NODE_WIDTH = 260;
-export const NODE_HEIGHT = 142;
-export const HORIZONTAL_GAP = 76;
-export const VERTICAL_GAP = 92;
-
-export function createEmptyStory(): StoryDocument {
-  return { version: 1, title: "Untitled Story", rootNodeId: null, nodes: [], edges: [] };
-}
-
-export function createStoryNode(id: string, siblingOrder = 0): StoryNode {
-  return { id, content: "", position: { x: 0, y: 0 }, siblingOrder };
-}
-
-export function createStoryEdge(source: string, target: string, relationship: Relationship): StoryEdge {
-  return { id: `${source}->${target}`, source, target, relationship };
-}
-
-/** Stable top-down tree layout. Sibling subtrees are kept together and centered under their parent. */
+import { HERO_STAGES, type Relationship, type StoryDocument, type StoryEdge, type StoryNode } from "../types";
+export const NODE_WIDTH = 260, NODE_HEIGHT = 142, HORIZONTAL_GAP = 76, VERTICAL_GAP = 92;
+export function createEmptyStory(): StoryDocument { return { version: 1, title: "Untitled Story", rootNodeId: null, nodes: [], edges: [], narrativeLinks: [] }; }
+export function createStoryNode(id: string, siblingOrder = 0): StoryNode { return { id, content: "", position: { x: 0, y: 0 }, siblingOrder }; }
+export function createStoryEdge(source: string, target: string, relationship: Relationship): StoryEdge { return { id: `${source}->${target}`, source, target, relationship }; }
 export function layoutStory(story: StoryDocument): StoryDocument {
-  if (!story.rootNodeId || story.nodes.length === 0) return story;
-  const nodeById = new Map(story.nodes.map((node) => [node.id, node]));
-  const children = new Map<string, StoryNode[]>();
-  for (const edge of story.edges) {
-    const child = nodeById.get(edge.target);
-    if (child) children.set(edge.source, [...(children.get(edge.source) ?? []), child]);
-  }
-  for (const list of children.values()) list.sort((a, b) => a.siblingOrder - b.siblingOrder || a.id.localeCompare(b.id));
+ if (!story.rootNodeId || !story.nodes.length) return story;
+ const byId = new Map(story.nodes.map(n=>[n.id,n])); const children = new Map<string,StoryNode[]>();
+ for (const e of story.edges) { const child=byId.get(e.target); if(child) children.set(e.source,[...(children.get(e.source)||[]),child]); }
+ for(const a of children.values()) a.sort((x,y)=>x.siblingOrder-y.siblingOrder||x.id.localeCompare(y.id));
+ const widths=new Map<string,number>(), visiting=new Set<string>();
+ const measure=(id:string):number=>{ if(widths.has(id))return widths.get(id)!; if(visiting.has(id))return NODE_WIDTH; visiting.add(id); const kids=children.get(id)||[]; const w=kids.length? kids.reduce((s,n)=>s+measure(n.id),0)+HORIZONTAL_GAP*(kids.length-1):NODE_WIDTH; visiting.delete(id); widths.set(id,Math.max(NODE_WIDTH,w)); return widths.get(id)!; };
+ measure(story.rootNodeId); const pos=new Map<string,{x:number;y:number}>();
+ const place=(id:string,left:number,depth:number)=>{const w=widths.get(id)||NODE_WIDTH;pos.set(id,{x:left+(w-NODE_WIDTH)/2,y:depth*(NODE_HEIGHT+VERTICAL_GAP)});const kids=children.get(id)||[];const total=kids.reduce((s,n)=>s+(widths.get(n.id)||NODE_WIDTH),0)+HORIZONTAL_GAP*Math.max(0,kids.length-1);let x=left+(w-total)/2;for(const kid of kids){const cw=widths.get(kid.id)||NODE_WIDTH;place(kid.id,x,depth+1);x+=cw+HORIZONTAL_GAP;}};
+ place(story.rootNodeId,0,0); return {...story,nodes:story.nodes.map(n=>({...n,position:pos.get(n.id)||n.position}))};
+}
+export function getAncestorEdgeIds(story:StoryDocument,id:string|null):Set<string>{const out=new Set<string>();if(!id)return out;const parent=new Map(story.edges.map(e=>[e.target,e]));const seen=new Set<string>();let cur=id;while(parent.has(cur)&&!seen.has(cur)){seen.add(cur);const e=parent.get(cur)!;out.add(e.id);cur=e.source;}return out;}
+export function getAncestorNodeIds(story:StoryDocument,id:string|null):Set<string>{const out=new Set<string>();if(!id)return out;const parent=new Map(story.edges.map(e=>[e.target,e.source]));const seen=new Set<string>();let cur=id;out.add(cur);while(parent.has(cur)&&!seen.has(cur)){seen.add(cur);cur=parent.get(cur)!;out.add(cur);}return out;}
+export function getDescendantIds(story:StoryDocument,id:string):Set<string>{const out=new Set<string>(), children=new Map<string,string[]>();for(const e of story.edges)children.set(e.source,[...(children.get(e.source)||[]),e.target]);const walk=(n:string)=>{for(const c of children.get(n)||[])if(!out.has(c)){out.add(c);walk(c);}};walk(id);return out;}
+export function validateStory(story:StoryDocument):string[]{const errors:string[]=[],ids=new Set(story.nodes.map(n=>n.id));if(ids.size!==story.nodes.length)errors.push("Node IDs must be unique.");if(!story.nodes.length){if(story.rootNodeId!==null||story.edges.length||(story.narrativeLinks??[]).length)errors.push("An empty story cannot have a root, hierarchy edges, or narrative links.");return errors;}if(!story.rootNodeId||!ids.has(story.rootNodeId))errors.push("A valid root node is required.");const edgeIds=new Set<string>(),parents=new Map<string,string>();for(const e of story.edges){if(edgeIds.has(e.id))errors.push(`Duplicate edge ID: ${e.id}`);edgeIds.add(e.id);if(!ids.has(e.source)||!ids.has(e.target))errors.push(`Edge ${e.id} references a missing node.`);if(e.source===e.target)errors.push("A node cannot be its own parent.");if(parents.has(e.target))errors.push(`Node ${e.target} has more than one parent.`);parents.set(e.target,e.source);}for(const n of story.nodes)if(n.id!==story.rootNodeId&&!parents.has(n.id))errors.push(`Non-root node ${n.id} must have exactly one parent.`);if(story.rootNodeId&&parents.has(story.rootNodeId))errors.push("The root node cannot have a parent.");const visited=new Set<string>(),active=new Set<string>(),children=new Map<string,string[]>();for(const e of story.edges)children.set(e.source,[...(children.get(e.source)||[]),e.target]);const walk=(id:string)=>{if(active.has(id)){errors.push("Story connections cannot contain cycles.");return;}if(visited.has(id))return;active.add(id);for(const c of children.get(id)||[])walk(c);active.delete(id);visited.add(id);};if(story.rootNodeId)walk(story.rootNodeId);if(visited.size!==story.nodes.length)errors.push("Every story node must be connected to the root.");
+ const linkIds=new Set<string>(), pairs=new Set<string>();
+ for(const link of story.narrativeLinks??[]){if(linkIds.has(link.id))errors.push(`Duplicate narrative link ID: ${link.id}`);linkIds.add(link.id);if(!ids.has(link.source)||!ids.has(link.target))errors.push(`Narrative link ${link.id} references a missing node.`);if(link.source===link.target)errors.push("A narrative link cannot connect a node to itself.");const pair=[link.source,link.target].sort().join("::");if(pairs.has(pair))errors.push("Duplicate narrative links are not allowed between the same two nodes.");pairs.add(pair);}
+ return [...new Set(errors)];}
 
-  const widths = new Map<string, number>();
-  const measuring = new Set<string>();
-  const measure = (id: string): number => {
-    if (widths.has(id)) return widths.get(id)!;
-    if (measuring.has(id)) return NODE_WIDTH;
-    measuring.add(id);
-    const descendants = children.get(id) ?? [];
-    const width = descendants.length === 0
-      ? NODE_WIDTH
-      : descendants.reduce((sum, child) => sum + measure(child.id), 0) + HORIZONTAL_GAP * (descendants.length - 1);
-    measuring.delete(id);
-    widths.set(id, Math.max(NODE_WIDTH, width));
-    return widths.get(id)!;
-  };
+export function parseStoryDocument(value: unknown): StoryDocument {
+ if (!value || typeof value !== "object") throw new Error("The file does not contain a story document.");
+ const doc=value as Record<string,unknown>;
+ if(doc.version!==1||typeof doc.title!=="string"||!(doc.rootNodeId===null||typeof doc.rootNodeId==="string")||!Array.isArray(doc.nodes)||!Array.isArray(doc.edges)) throw new Error("The story file has an unsupported or malformed structure.");
+ const stages=new Set<string>(HERO_STAGES.map(s=>s.id));
+ for(const raw of doc.nodes){if(!raw||typeof raw!=="object")throw new Error("A story beat is malformed.");const n=raw as Record<string,unknown>;const p=n.position as Record<string,unknown>|undefined;if(typeof n.id!=="string"||typeof n.content!=="string"||typeof n.siblingOrder!=="number"||!p||typeof p.x!=="number"||typeof p.y!=="number")throw new Error("A story beat is missing required fields.");if(n.heroJourneyStage!==undefined&&!stages.has(String(n.heroJourneyStage)))throw new Error("A story beat has an unknown Hero's Journey stage.");if(n.writerBlocked!==undefined&&typeof n.writerBlocked!=="boolean")throw new Error("A story beat has an invalid Writer's Block setting.");}
+ for(const raw of doc.edges){if(!raw||typeof raw!=="object")throw new Error("A story connection is malformed.");const e=raw as Record<string,unknown>;if(typeof e.id!=="string"||typeof e.source!=="string"||typeof e.target!=="string"||(e.relationship!=="therefore"&&e.relationship!=="but"))throw new Error("A story connection is missing required fields.");}
+ const story={...(value as StoryDocument),narrativeLinks:Array.isArray(doc.narrativeLinks)?doc.narrativeLinks:[]};for(const raw of story.narrativeLinks){if(!raw||typeof raw.id!=="string"||typeof raw.source!=="string"||typeof raw.target!=="string"||(raw.relationship!=="foreshadowing"&&raw.relationship!=="callback"))throw new Error("A narrative link is malformed.");}const errors=validateStory(story);if(errors.length)throw new Error(errors.join(" "));return story;
+}
+export function addChildToStory(story:StoryDocument,parentId:string,childId:string,relationship:Relationship):StoryDocument{if(!story.nodes.some(n=>n.id===parentId))throw new Error("Parent node does not exist.");const order=story.edges.filter(e=>e.source===parentId).length;return layoutStory({...story,nodes:[...story.nodes,createStoryNode(childId,order)],edges:[...story.edges,createStoryEdge(parentId,childId,relationship)]});}
+export function reparentStoryNode(story:StoryDocument,nodeId:string,newParentId:string,mode:"leave"|"move",relationship:Relationship):StoryDocument{if(nodeId===story.rootNodeId)throw new Error("The root cannot be reparented.");if(nodeId===newParentId)throw new Error("A node cannot parent itself.");if(getDescendantIds(story,nodeId).has(newParentId))throw new Error("A node cannot be moved beneath one of its descendants.");const oldEdge=story.edges.find(e=>e.target===nodeId);if(!oldEdge)throw new Error("The selected node has no parent.");if(oldEdge.source===newParentId)return {...story,edges:story.edges.map(e=>e.target===nodeId?{...e,relationship}:e)};let nodes=[...story.nodes],edges=story.edges.filter(e=>e.target!==nodeId);if(mode==="leave"){const placeholderId=`placeholder-${nodeId}-${Date.now()}`;const oldNode=nodes.find(n=>n.id===nodeId)!;const placeholder={...createStoryNode(placeholderId,oldNode.siblingOrder),content:"",position:{...oldNode.position}};const childEdges=edges.filter(e=>e.source===nodeId);edges=edges.filter(e=>e.source!==nodeId);for(const childEdge of childEdges)edges.push({...childEdge,source:placeholderId,id:`${placeholderId}->${childEdge.target}`});nodes=nodes.map(n=>n.id===nodeId?{...n,siblingOrder:story.edges.filter(e=>e.source===newParentId).length}:n);nodes.push(placeholder);edges.push(createStoryEdge(oldEdge.source,placeholderId,oldEdge.relationship));}else{nodes=nodes.map(n=>n.id===nodeId?{...n,siblingOrder:story.edges.filter(e=>e.source===newParentId).length}:n);}edges.push(createStoryEdge(newParentId,nodeId,relationship));return layoutStory({...story,nodes,edges});}
+export function deleteStoryNode(story:StoryDocument,nodeId:string):StoryDocument{if(nodeId===story.rootNodeId)return createEmptyStory();const descendants=getDescendantIds(story,nodeId);descendants.add(nodeId);const nodes=story.nodes.filter(n=>!descendants.has(n.id));const edges=story.edges.filter(e=>!descendants.has(e.source)&&!descendants.has(e.target));const narrativeLinks=(story.narrativeLinks??[]).filter(e=>!descendants.has(e.source)&&!descendants.has(e.target));return layoutStory({...story,nodes,edges,narrativeLinks});}
 
-  measure(story.rootNodeId);
-  const positions = new Map<string, { x: number; y: number }>();
-  const place = (id: string, left: number, depth: number) => {
-    const width = widths.get(id) ?? NODE_WIDTH;
-    positions.set(id, { x: left + (width - NODE_WIDTH) / 2, y: depth * (NODE_HEIGHT + VERTICAL_GAP) });
-    const descendants = children.get(id) ?? [];
-    const totalWidth = descendants.reduce((sum, child) => sum + (widths.get(child.id) ?? NODE_WIDTH), 0)
-      + HORIZONTAL_GAP * Math.max(0, descendants.length - 1);
-    let childLeft = left + (width - totalWidth) / 2;
-    for (const child of descendants) {
-      const childWidth = widths.get(child.id) ?? NODE_WIDTH;
-      place(child.id, childLeft, depth + 1);
-      childLeft += childWidth + HORIZONTAL_GAP;
-    }
-  };
-  place(story.rootNodeId, 0, 0);
-  return { ...story, nodes: story.nodes.map((node) => ({ ...node, position: positions.get(node.id) ?? node.position })) };
+export function isAncestor(story:StoryDocument,ancestorId:string,nodeId:string):boolean{return getAncestorNodeIds(story,nodeId).has(ancestorId)&&ancestorId!==nodeId;}
+export function createNarrativeLink(story:StoryDocument,firstId:string,secondId:string,relationship:"foreshadowing"|"callback",id:string):import("../types").NarrativeLink{
+ if(firstId===secondId)throw new Error("A node cannot link to itself.");
+ if(!story.nodes.some(n=>n.id===firstId)||!story.nodes.some(n=>n.id===secondId))throw new Error("Both narrative-link nodes must exist.");
+ if((story.narrativeLinks??[]).some(l=>(l.source===firstId&&l.target===secondId)||(l.source===secondId&&l.target===firstId)))throw new Error("A narrative link already exists between these nodes.");
+ const firstAncestor=isAncestor(story,firstId,secondId),secondAncestor=isAncestor(story,secondId,firstId);
+ let source=firstId,target=secondId;
+ if(firstAncestor||secondAncestor){const earlier=firstAncestor?firstId:secondId,later=firstAncestor?secondId:firstId;source=relationship==="foreshadowing"?earlier:later;target=relationship==="foreshadowing"?later:earlier;}
+ else if(relationship==="callback"){source=secondId;target=firstId;}
+ return{id,source,target,relationship};
 }
 
-export function getAncestorEdgeIds(story: StoryDocument, nodeId: string | null): Set<string> {
-  const result = new Set<string>();
-  if (!nodeId) return result;
-  const parentByChild = new Map(story.edges.map((edge) => [edge.target, edge]));
-  const visited = new Set<string>();
-  let current = nodeId;
-  while (parentByChild.has(current) && !visited.has(current)) {
-    visited.add(current);
-    const edge = parentByChild.get(current)!;
-    result.add(edge.id);
-    current = edge.source;
-  }
-  return result;
-}
-
-export function getAncestorNodeIds(story: StoryDocument, nodeId: string | null): Set<string> {
-  const result = new Set<string>();
-  if (!nodeId) return result;
-  result.add(nodeId);
-  const parentByChild = new Map(story.edges.map((edge) => [edge.target, edge.source]));
-  const visited = new Set<string>();
-  let current = nodeId;
-  while (parentByChild.has(current) && !visited.has(current)) {
-    visited.add(current);
-    current = parentByChild.get(current)!;
-    result.add(current);
-  }
-  return result;
-}
-
-export function validateStory(story: StoryDocument): string[] {
-  const errors: string[] = [];
-  const nodeIds = new Set(story.nodes.map((node) => node.id));
-  if (nodeIds.size !== story.nodes.length) errors.push("Node IDs must be unique.");
-  if (story.nodes.length === 0) {
-    if (story.rootNodeId !== null || story.edges.length > 0) errors.push("An empty story cannot have a root or edges.");
-    return errors;
-  }
-  if (!story.rootNodeId || !nodeIds.has(story.rootNodeId)) errors.push("A valid root node is required.");
-
-  const edgeIds = new Set<string>();
-  const parentByChild = new Map<string, string>();
-  for (const edge of story.edges) {
-    if (edgeIds.has(edge.id)) errors.push(`Duplicate edge ID: ${edge.id}`);
-    edgeIds.add(edge.id);
-    if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) errors.push(`Edge ${edge.id} references a missing node.`);
-    if (edge.source === edge.target) errors.push("A node cannot be its own parent.");
-    if (parentByChild.has(edge.target)) errors.push(`Node ${edge.target} has more than one parent.`);
-    parentByChild.set(edge.target, edge.source);
-  }
-  for (const node of story.nodes) {
-    if (node.id !== story.rootNodeId && !parentByChild.has(node.id)) errors.push(`Non-root node ${node.id} must have exactly one parent.`);
-  }
-  if (story.rootNodeId && parentByChild.has(story.rootNodeId)) errors.push("The root node cannot have a parent.");
-
-  const visited = new Set<string>();
-  const visiting = new Set<string>();
-  const children = new Map<string, string[]>();
-  for (const edge of story.edges) children.set(edge.source, [...(children.get(edge.source) ?? []), edge.target]);
-  const walk = (id: string) => {
-    if (visiting.has(id)) { errors.push("Story connections cannot contain cycles."); return; }
-    if (visited.has(id)) return;
-    visiting.add(id);
-    for (const child of children.get(id) ?? []) walk(child);
-    visiting.delete(id);
-    visited.add(id);
-  };
-  if (story.rootNodeId) walk(story.rootNodeId);
-  if (visited.size !== story.nodes.length) errors.push("Every story node must be connected to the root.");
-  return [...new Set(errors)];
-}
-
-export function addChildToStory(story: StoryDocument, parentId: string, childId: string, relationship: Relationship): StoryDocument {
-  if (!story.nodes.some((node) => node.id === parentId)) throw new Error("Parent node does not exist.");
-  if (story.nodes.some((node) => node.id === childId)) throw new Error("Node ID already exists.");
-  const siblingOrder = story.edges.filter((edge) => edge.source === parentId).length;
-  return layoutStory({
-    ...story,
-    nodes: [...story.nodes, createStoryNode(childId, siblingOrder)],
-    edges: [...story.edges, createStoryEdge(parentId, childId, relationship)],
-  });
+export function getNarrativeLinkReparentReview(before:StoryDocument,after:StoryDocument):{affectedIds:string[];updates:{id:string;source:string;target:string}[]}{
+ const affectedIds:string[]=[],updates:{id:string;source:string;target:string}[]=[];
+ for(const link of before.narrativeLinks??[]){
+  const beforeRelation=isAncestor(before,link.source,link.target)?"forward":isAncestor(before,link.target,link.source)?"reverse":"unrelated";
+  const afterRelation=isAncestor(after,link.source,link.target)?"forward":isAncestor(after,link.target,link.source)?"reverse":"unrelated";
+  if(beforeRelation===afterRelation)continue;
+  affectedIds.push(link.id);
+  if(afterRelation==="unrelated")continue;
+  const earlier=afterRelation==="forward"?link.source:link.target,later=afterRelation==="forward"?link.target:link.source;
+  updates.push({id:link.id,source:link.relationship==="foreshadowing"?earlier:later,target:link.relationship==="foreshadowing"?later:earlier});
+ }
+ return{affectedIds,updates};
 }

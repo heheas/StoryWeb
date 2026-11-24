@@ -1,82 +1,24 @@
 import { useEffect, useMemo } from "react";
-import {
-  Background,
-  Controls,
-  MiniMap,
-  ReactFlow,
-  ReactFlowProvider,
-  useReactFlow,
-} from "@xyflow/react";
+import { Background, Controls, MiniMap, MarkerType, ReactFlow, ReactFlowProvider, useReactFlow, useViewport, type Connection } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { getAncestorEdgeIds, getAncestorNodeIds } from "../lib/storyModel";
+import { getAncestorEdgeIds, getAncestorNodeIds, getNarrativeLinkReparentReview, reparentStoryNode } from "../lib/storyModel";
 import { useStoryStore } from "../store/useStoryStore";
-import type { StoryFlowEdge, StoryFlowNode } from "../types";
+import { HERO_STAGES, type StoryFlowEdge, type StoryFlowNode } from "../types";
 import { StoryNodeView } from "./StoryNodeView";
 import { StoryEdgeView } from "./StoryEdgeView";
-
-const nodeTypes = { story: StoryNodeView };
-const edgeTypes = { story: StoryEdgeView };
-
-function CanvasContents() {
-  const story = useStoryStore((state) => state.story);
-  const selectedNodeId = useStoryStore((state) => state.selectedNodeId);
-  const selectNode = useStoryStore((state) => state.selectNode);
-  const { fitView } = useReactFlow();
-
-  const pathEdgeIds = useMemo(() => getAncestorEdgeIds(story, selectedNodeId), [story, selectedNodeId]);
-  const pathNodeIds = useMemo(() => getAncestorNodeIds(story, selectedNodeId), [story, selectedNodeId]);
-  const nodes = useMemo<StoryFlowNode[]>(() => story.nodes.map((node) => ({
-    id: node.id,
-    type: "story",
-    position: node.position,
-    selected: node.id === selectedNodeId,
-    data: { content: node.content, isOnPath: pathNodeIds.has(node.id) },
-  })), [story.nodes, selectedNodeId, pathNodeIds]);
-  const edges = useMemo<StoryFlowEdge[]>(() => story.edges.map((edge) => ({
-    id: edge.id,
-    source: edge.source,
-    target: edge.target,
-    type: "story",
-    data: { relationship: edge.relationship, isOnPath: pathEdgeIds.has(edge.id) },
-  })), [story.edges, pathEdgeIds]);
-
-  useEffect(() => {
-    if (story.nodes.length > 0) {
-      const timer = window.setTimeout(() => void fitView({ padding: 0.22, duration: 250 }), 50);
-      return () => window.clearTimeout(timer);
-    }
-  }, [story.rootNodeId, story.nodes.length, fitView]);
-
-  return (
-    <div className="flow-surface" aria-label="Interactive story canvas">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.22 }}
-        proOptions={{ hideAttribution: true }}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable
-        onNodeClick={(_, node) => selectNode(node.id)}
-        onPaneClick={() => selectNode(null)}
-        panOnDrag
-        zoomOnScroll
-        zoomOnPinch
-        minZoom={0.15}
-        maxZoom={2}
-        defaultEdgeOptions={{ type: "story" }}
-      >
-        <Background gap={24} size={1} />
-        <Controls showInteractive={false} />
-        <MiniMap pannable zoomable nodeColor={(node) => node.selected ? "#647b70" : "#aebbb2"} />
-      </ReactFlow>
-    </div>
-  );
+const nodeTypes={story:StoryNodeView},edgeTypes={story:StoryEdgeView};
+function CanvasContents(){
+ const story=useStoryStore(s=>s.story),selected=useStoryStore(s=>s.selectedNodeId),selectedLink=useStoryStore(s=>s.selectedNarrativeLinkId),select=useStoryStore(s=>s.selectNode),selectLink=useStoryStore(s=>s.selectNarrativeLink),reparent=useStoryStore(s=>s.reparentNode);
+ const {fitView,setCenter,zoomIn,zoomOut}=useReactFlow();const {zoom}=useViewport();
+ const edgePath=useMemo(()=>getAncestorEdgeIds(story,selected),[story,selected]),nodePath=useMemo(()=>getAncestorNodeIds(story,selected),[story,selected]);
+ const nodes=useMemo<StoryFlowNode[]>(()=>story.nodes.map(n=>({id:n.id,type:"story",position:n.position,selected:n.id===selected,data:{content:n.content,isOnPath:nodePath.has(n.id),stageColor:HERO_STAGES.find(s=>s.id===n.heroJourneyStage)?.color}})),[story.nodes,selected,nodePath]);
+ const edges=useMemo<StoryFlowEdge[]>(()=>[
+  ...story.edges.map(e=>({id:e.id,source:e.source,target:e.target,sourceHandle:"hierarchy-out",targetHandle:"hierarchy-in",type:"story" as const,markerEnd:{type:MarkerType.ArrowClosed,color:e.relationship==="therefore"?"#668b75":"#c87970"},data:{relationship:e.relationship,isOnPath:edgePath.has(e.id)}})),
+  ...(story.narrativeLinks??[]).map(e=>({id:e.id,source:e.source,target:e.target,sourceHandle:"narrative-out",targetHandle:"narrative-in",type:"story" as const,markerEnd:{type:MarkerType.ArrowClosed,color:e.relationship==="foreshadowing"?"#9672b8":"#648fc2"},data:{relationship:e.relationship,isOnPath:false,narrative:true,selected:selectedLink===e.id}}))
+ ],[story.edges,story.narrativeLinks,edgePath,selectedLink]);
+ useEffect(()=>{if(story.nodes.length){const t=window.setTimeout(()=>void fitView({padding:.2,duration:250}),80);return()=>window.clearTimeout(t);}},[story.rootNodeId,story.nodes.length,fitView]);
+ useEffect(()=>{if(!selected)return;const node=story.nodes.find(n=>n.id===selected);if(node){const t=window.setTimeout(()=>void setCenter(node.position.x+130,node.position.y+70,{zoom:1,duration:220}),30);return()=>window.clearTimeout(t);}},[selected,story.nodes,setCenter]);
+ const applyParentChange=(connection:Connection)=>{if(!connection.source||!connection.target||connection.source===connection.target||connection.sourceHandle!=="hierarchy-out"||connection.targetHandle!=="hierarchy-in")return;const current=story.edges.find(e=>e.target===connection.target);if(!current)return;const descendants=new Set<string>();const walk=(id:string)=>{for(const e of story.edges.filter(x=>x.source===id))if(!descendants.has(e.target)){descendants.add(e.target);walk(e.target);}};walk(connection.target);if(descendants.has(connection.source))return;const mode=window.confirm("Move this node and all its descendants?\n\nChoose Cancel to leave its children behind with an empty placeholder.")?"move":"leave";try{const proposed=reparentStoryNode(story,connection.target,connection.source,mode,current.relationship);const review=getNarrativeLinkReparentReview(story,proposed);let updates:{id:string;source:string;target:string}[]=[];if(review.affectedIds.length&&window.confirm(`${review.affectedIds.length} narrative link(s) may need a direction review.\\n\\nOK: update directions for the new hierarchy.\\nCancel: preserve their current directions.`))updates=review.updates;reparent(connection.target,connection.source,mode,current.relationship,updates);}catch{/* Invalid reconnections are cancelled without changing the graph. */}};
+ return <div className="flow-surface" aria-label="Interactive story canvas"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView fitViewOptions={{padding:.2}} proOptions={{hideAttribution:true}} nodesDraggable={false} nodesConnectable elementsSelectable isValidConnection={(connection)=>connection.sourceHandle==="hierarchy-out"&&connection.targetHandle==="hierarchy-in"} onNodeClick={(_,n)=>select(n.id)} onEdgeClick={(_,e)=>{if(e.data?.narrative)selectLink(e.id);}} onPaneClick={()=>{select(null);selectLink(null);}} onConnect={applyParentChange} onReconnect={(_,connection)=>applyParentChange(connection)} edgesReconnectable panOnDrag zoomOnScroll zoomOnPinch minZoom={.12} maxZoom={2.5} defaultEdgeOptions={{type:"story"}}><Background gap={24} size={1}/><Controls showInteractive={false}/><MiniMap pannable zoomable nodeColor={n=>n.selected?"#647b70":"#aebbb2"}/></ReactFlow><div className="canvas-zoom-tools"><button onClick={()=>zoomOut()} title="Zoom out">−</button><span>{Math.round(zoom*100)}%</span><button onClick={()=>zoomIn()} title="Zoom in">+</button><button onClick={()=>void fitView({padding:.2,duration:250})}>Fit</button>{selected&&<button onClick={()=>{const n=story.nodes.find(x=>x.id===selected);if(n)void setCenter(n.position.x+130,n.position.y+70,{zoom:1,duration:250});}}>Center</button>}</div></div>;
 }
-
-export function StoryCanvas() {
-  return <ReactFlowProvider><CanvasContents /></ReactFlowProvider>;
-}
+export function StoryCanvas(){return <ReactFlowProvider><CanvasContents/></ReactFlowProvider>;}

@@ -7,6 +7,7 @@ describe("story history", () => {
     useStoryStore.setState({
       story: createEmptyStory(),
       selectedNodeId: null,
+      selectedNarrativeLinkId: null,
       undoStack: [],
       redoStack: [],
     });
@@ -46,4 +47,17 @@ describe("story history", () => {
     useStoryStore.getState().updateNodeContent(rootId, "");
     expect(useStoryStore.getState().undoStack).toHaveLength(1);
   });
+  it("records narrative links in undo and redo history", () => {
+    useStoryStore.getState().createRoot();
+    const rootId = useStoryStore.getState().story.rootNodeId!;
+    useStoryStore.getState().addChild(rootId, "therefore");
+    const childId = useStoryStore.getState().story.nodes.find((node) => node.id !== rootId)!.id;
+    useStoryStore.getState().addNarrativeLink(rootId, childId, "foreshadowing");
+    expect(useStoryStore.getState().story.narrativeLinks).toHaveLength(1);
+    useStoryStore.getState().undo();
+    expect(useStoryStore.getState().story.narrativeLinks).toHaveLength(0);
+    useStoryStore.getState().redo();
+    expect(useStoryStore.getState().story.narrativeLinks).toHaveLength(1);
+  });
+
 });

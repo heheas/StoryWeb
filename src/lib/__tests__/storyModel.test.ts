@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addChildToStory, createEmptyStory, createStoryNode, getAncestorEdgeIds, getAncestorNodeIds, layoutStory, validateStory } from "../storyModel";
+import { addChildToStory, createEmptyStory, createNarrativeLink, createStoryNode, getAncestorEdgeIds, getAncestorNodeIds, layoutStory, validateStory } from "../storyModel";
 import type { StoryDocument } from "../../types";
 
 function baseStory(): StoryDocument {
@@ -53,5 +53,29 @@ describe("story model", () => {
     const laidOut = layoutStory(story);
     expect(laidOut.nodes.find((node) => node.id === "root")!.position.y).toBe(0);
     expect(laidOut.nodes.find((node) => node.id === "child")!.position.y).toBeGreaterThan(0);
+  });
+
+  it("directs ancestor narrative links according to relationship type", () => {
+    const story = addChildToStory(baseStory(), "root", "child", "therefore");
+    expect(createNarrativeLink(story, "root", "child", "foreshadowing", "f1"))
+      .toMatchObject({ source: "root", target: "child", relationship: "foreshadowing" });
+    expect(createNarrativeLink(story, "root", "child", "callback", "c1"))
+      .toMatchObject({ source: "child", target: "root", relationship: "callback" });
+  });
+
+  it("uses the selected beat as the starting point for unrelated branches", () => {
+    let story = addChildToStory(baseStory(), "root", "a", "therefore");
+    story = addChildToStory(story, "root", "b", "but");
+    expect(createNarrativeLink(story, "a", "b", "foreshadowing", "f1")).toMatchObject({ source: "a", target: "b" });
+    expect(createNarrativeLink(story, "a", "b", "callback", "c1")).toMatchObject({ source: "b", target: "a" });
+  });
+
+  it("rejects duplicate narrative links between the same pair", () => {
+    const story = addChildToStory(baseStory(), "root", "child", "therefore");
+    const link = createNarrativeLink(story, "root", "child", "foreshadowing", "f1");
+    const withLink = { ...story, narrativeLinks: [link] };
+    expect(() => createNarrativeLink(withLink, "child", "root", "callback", "c2")).toThrow("A narrative link already exists");
+    expect(validateStory({ ...withLink, narrativeLinks: [link, { ...link, id: "f2" }] }))
+      .toContain("Duplicate narrative links are not allowed between the same two nodes.");
   });
 });
