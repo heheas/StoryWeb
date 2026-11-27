@@ -1,6 +1,6 @@
 import { HERO_STAGES, type Relationship, type StoryDocument, type StoryEdge, type StoryNode } from "../types";
 export const NODE_WIDTH = 260, NODE_HEIGHT = 142, HORIZONTAL_GAP = 76, VERTICAL_GAP = 92;
-export function createEmptyStory(): StoryDocument { return { version: 1, title: "Title", rootNodeId: null, nodes: [], edges: [], narrativeLinks: [] }; }
+export function createEmptyStory(): StoryDocument { return { version: 1, title: "Untitled Story", rootNodeId: null, nodes: [], edges: [], narrativeLinks: [] }; }
 export function createStoryNode(id: string, siblingOrder = 0): StoryNode { return { id, content: "", position: { x: 0, y: 0 }, siblingOrder }; }
 export function createStoryEdge(source: string, target: string, relationship: Relationship): StoryEdge { return { id: `${source}->${target}`, source, target, relationship }; }
 export function layoutStory(story: StoryDocument): StoryDocument {
