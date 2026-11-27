@@ -334,3 +334,63 @@ h1 { margin: 0; font-size: clamp(24px, 3vw, 32px); line-height: 1.2; font-weight
  .node-stage-button{width:32px;height:32px}
  .story-node-actions button{min-height:32px}
 }
+
+
+/* Story Web refinement pass */
+.brand-mark{width:30px;height:30px;object-fit:contain;border-radius:8px}
+.canvas-heading{margin-bottom:18px}
+.story-title-input{margin-bottom:5px}
+.selection-toolbar{flex-wrap:wrap}
+.node-selection-toolbar{justify-content:flex-start}
+.story-edge-label{user-select:none}
+.story-handle{width:13px!important;height:13px!important;border:2px solid var(--panel)!important;box-shadow:0 0 0 1px var(--border);z-index:8}
+.story-handle::after{content:"";position:absolute;inset:-9px}
+.narrative-source-handle{opacity:.72}
+.story-node:hover .story-handle,.story-node.is-selected .story-handle{opacity:1}
+.journey-overview{position:relative;width:190px;height:190px;min-height:190px;margin:8px auto 14px;display:grid;place-items:center;overflow:visible}
+.journey-mountain{position:absolute;z-index:1;width:76px;height:76px;border-radius:50%;display:grid;place-items:center;background:var(--panel);color:var(--accent);border:1px solid var(--border);box-shadow:0 2px 12px #0000000d}
+.stage-circles{position:absolute;inset:0;display:block;width:100%;height:100%}
+.stage-circle{position:absolute;top:50%;left:50%;width:29px;height:29px;display:grid;place-items:center;padding:0;border-radius:50%;font-size:10px;transform-origin:center;box-shadow:0 0 0 3px var(--panel);transition:transform .15s ease}
+.stage-circle:nth-child(1){transform:translate(-50%,-50%) translateY(-78px)}
+.stage-circle:nth-child(2){transform:translate(-50%,-50%) rotate(30deg) translateY(-78px) rotate(-30deg)}
+.stage-circle:nth-child(3){transform:translate(-50%,-50%) rotate(60deg) translateY(-78px) rotate(-60deg)}
+.stage-circle:nth-child(4){transform:translate(-50%,-50%) rotate(90deg) translateY(-78px) rotate(-90deg)}
+.stage-circle:nth-child(5){transform:translate(-50%,-50%) rotate(120deg) translateY(-78px) rotate(-120deg)}
+.stage-circle:nth-child(6){transform:translate(-50%,-50%) rotate(150deg) translateY(-78px) rotate(-150deg)}
+.stage-circle:nth-child(7){transform:translate(-50%,-50%) rotate(180deg) translateY(-78px) rotate(-180deg)}
+.stage-circle:nth-child(8){transform:translate(-50%,-50%) rotate(210deg) translateY(-78px) rotate(-210deg)}
+.stage-circle:nth-child(9){transform:translate(-50%,-50%) rotate(240deg) translateY(-78px) rotate(-240deg)}
+.stage-circle:nth-child(10){transform:translate(-50%,-50%) rotate(270deg) translateY(-78px) rotate(-270deg)}
+.stage-circle:nth-child(11){transform:translate(-50%,-50%) rotate(300deg) translateY(-78px) rotate(-300deg)}
+.stage-circle:nth-child(12){transform:translate(-50%,-50%) rotate(330deg) translateY(-78px) rotate(-330deg)}
+.stage-circle:hover,.stage-circle:focus-visible{z-index:5;scale:1.12}
+.journey-info-button{position:absolute;right:4px;top:4px;z-index:4;width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:var(--panel);color:var(--muted);font-size:12px;font-weight:800;cursor:pointer}
+.journey-info-popover{position:absolute;z-index:10;top:28px;right:0;width:210px;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--panel);color:var(--text);font-size:11px;line-height:1.45;box-shadow:0 8px 24px #0002}
+.sidebar-heading{display:flex;align-items:center;gap:10px}
+.sidebar-journey-mark{position:relative;display:grid;place-items:center;width:34px;height:34px;color:var(--accent)}
+.sidebar-journey-mark button{position:absolute;right:-3px;bottom:-3px;width:16px;height:16px;border:1px solid var(--panel);border-radius:50%;background:var(--accent);color:white;font-size:10px;font-weight:800;cursor:pointer}
+.stage-choice-list{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 0}
+.stage-choice-list button{display:flex;align-items:center;gap:7px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:11px;text-align:left;cursor:pointer}
+.stage-choice-list button span{display:grid;place-items:center;flex:0 0 22px;width:22px;height:22px;border-radius:50%;color:white;font-size:10px;font-weight:800}
+.writer-dialog{width:min(620px,100%);max-height:86dvh;overflow:auto}
+.writer-dialog .suggestion-row{align-items:flex-start}
+.canvas-zoom-tools button{min-height:30px}
+@media(max-width:900px){.journey-overview{width:184px;height:184px;min-height:184px}.stage-circle{width:32px;height:32px}.story-handle{width:16px!important;height:16px!important}.stage-choice-list{grid-template-columns:1fr}}
+@media(max-width:560px){.selection-toolbar{gap:5px}.node-selection-toolbar button{min-height:36px}.writer-dialog{max-height:88dvh}.journey-overview{margin-top:4px;margin-bottom:10px}}
+
+.journey-mountain{top:50%;left:50%;transform:translate(-50%,-50%)}
+.story-edge-context{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:all}
+.edge-edit-controls{display:flex;align-items:center;gap:3px;padding:3px;border:1px solid var(--border);border-radius:7px;background:var(--panel);box-shadow:0 3px 12px #0002}
+.edge-edit-controls select{max-width:112px;padding:3px 5px;border:0;background:var(--panel);color:var(--text);font-size:10px}
+.edge-edit-controls button{width:22px;height:22px;border:0;border-radius:5px;background:var(--surface);color:var(--danger,#b65d58);font-size:17px;line-height:1;cursor:pointer}
+
+.node-context-toolbar{display:flex;gap:3px;padding:4px;border:1px solid var(--border);border-radius:9px;background:var(--panel);box-shadow:0 5px 18px #0002}
+.node-context-toolbar button{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:6px;background:transparent;color:var(--text);cursor:pointer}
+.node-context-toolbar button:hover,.node-context-toolbar button:focus-visible{background:var(--hover);outline:2px solid var(--accent);outline-offset:1px}
+.node-context-toolbar button:last-child{color:#bd625c}
+.narrative-source-handle{margin-top:12px!important}
+.canvas-zoom-tools button[aria-label="Show minimap"],.canvas-zoom-tools button[aria-label="Hide minimap"]{display:grid;place-items:center;min-width:32px;padding:6px}
+
+.minimap-toggle{position:absolute;right:14px;bottom:14px;z-index:8;display:grid;place-items:center;width:38px;height:38px;border:1px solid var(--border);border-radius:9px;background:var(--panel);color:var(--text);box-shadow:0 2px 10px #0002;cursor:pointer}
+.minimap-toggle:hover,.minimap-toggle:focus-visible{background:var(--hover);outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:560px){.minimap-toggle{right:9px;bottom:9px;width:42px;height:42px}}

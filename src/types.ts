@@ -21,11 +21,6 @@ export interface StoryEdge { id: string; source: string; target: string; relatio
 export interface NarrativeLink { id: string; source: string; target: string; relationship: NarrativeRelationship; }
 export interface StoryDocument { version: 1; title: string; rootNodeId: string | null; nodes: StoryNode[]; edges: StoryEdge[]; narrativeLinks?: NarrativeLink[]; }
 export interface StoryNodeViewData extends Record<string, unknown> { content: string; isOnPath: boolean; stageColor?: string; }
-export interface StoryEdgeViewData extends Record<string, unknown> {
-  relationship: Relationship | NarrativeRelationship;
-  isOnPath: boolean;
-  narrative?: boolean;
-  selected?: boolean;
-}
+export interface StoryEdgeViewData extends Record<string, unknown> { relationship: Relationship | NarrativeRelationship; isOnPath: boolean; narrative?: boolean; selected?: boolean; }
 export type StoryFlowNode = Node<StoryNodeViewData, "story">;
 export type StoryFlowEdge = Edge<StoryEdgeViewData, "story">;

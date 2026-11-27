@@ -8,6 +8,7 @@ describe("story history", () => {
       story: createEmptyStory(),
       selectedNodeId: null,
       selectedNarrativeLinkId: null,
+      selectedHierarchyEdgeId: null,
       undoStack: [],
       redoStack: [],
     });
@@ -60,4 +61,40 @@ describe("story history", () => {
     expect(useStoryStore.getState().story.narrativeLinks).toHaveLength(1);
   });
 
+
+  it("edits hierarchy relationships without changing endpoints and supports undo", () => {
+    useStoryStore.getState().createRoot();
+    const rootId = useStoryStore.getState().story.rootNodeId!;
+    useStoryStore.getState().addChild(rootId, "therefore");
+    const edge = useStoryStore.getState().story.edges[0];
+    useStoryStore.getState().updateHierarchyEdge(edge.id, "but");
+    expect(useStoryStore.getState().story.edges[0]).toMatchObject({ id: edge.id, source: rootId, target: edge.target, relationship: "but" });
+    useStoryStore.getState().undo();
+    expect(useStoryStore.getState().story.edges[0].relationship).toBe("therefore");
+  });
+
+  it("deletes a hierarchy connection without orphaning its child branch and restores it with undo", () => {
+    useStoryStore.getState().createRoot();
+    const rootId = useStoryStore.getState().story.rootNodeId!;
+    useStoryStore.getState().addChild(rootId, "therefore");
+    const edge = useStoryStore.getState().story.edges[0];
+    useStoryStore.getState().deleteHierarchyEdge(edge.id);
+    expect(useStoryStore.getState().story.nodes).toHaveLength(1);
+    expect(useStoryStore.getState().story.edges).toHaveLength(0);
+    useStoryStore.getState().undo();
+    expect(useStoryStore.getState().story.edges[0]).toEqual(edge);
+  });
+
+  it("reverses narrative endpoints when changing between Foreshadowing and Callback", () => {
+    useStoryStore.getState().createRoot();
+    const rootId = useStoryStore.getState().story.rootNodeId!;
+    useStoryStore.getState().addChild(rootId, "therefore");
+    const childId = useStoryStore.getState().story.nodes.find(node => node.id !== rootId)!.id;
+    useStoryStore.getState().addNarrativeLink(rootId, childId, "foreshadowing");
+    const link = useStoryStore.getState().story.narrativeLinks![0];
+    useStoryStore.getState().updateNarrativeLink(link.id, "callback");
+    expect(useStoryStore.getState().story.narrativeLinks![0]).toMatchObject({ id: link.id, source: childId, target: rootId, relationship: "callback" });
+    useStoryStore.getState().undo();
+    expect(useStoryStore.getState().story.narrativeLinks![0]).toEqual(link);
+  });
 });

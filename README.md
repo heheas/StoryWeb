@@ -64,3 +64,18 @@ export default defineConfig({
 - TypeScript/TSX syntax transpilation: passed.
 - Story-model smoke checks: passed for direction rules, validation, cascade deletion, reparent review detection, and legacy import compatibility.
 - Full `npm run typecheck`, `npm test`, and `npm run build`: not completed because dependency installation timed out in this environment. Run `npm install` followed by the commands above locally before deployment.
+
+
+## UI and interaction refinement update
+
+- The Hero's Journey overview now uses a centered mountain with twelve numbered stage controls arranged around it. A compact information control explains the overview, and the sidebar heading uses an overlapping information marker.
+- Added a jumping-spider-and-pencil SVG brand mark, simplified favicon, and web app manifest.
+- Narrative connections can be initiated from either side of a node. Ancestor/descendant relationships automatically select Foreshadowing or Callback and orient the arrow accordingly; unrelated branches open the relationship chooser.
+- Node actions are exposed in a four-button contextual toolbar on the selected node.
+- Both hierarchy and narrative edges can be selected. Selected edges show relationship editing and deletion controls beside the connection. Hierarchy edge deletion removes the connected child branch to preserve the single-parent connected-tree invariant.
+- Connection hit areas are enlarged, the minimap is hidden until toggled, Writer's Block uses a modal, and the default story title is `Title`.
+- React Flow node dragging, background panning, and pinch zoom are enabled for touch-friendly canvas navigation.
+
+### Verification note
+
+The source files passed TypeScript/TSX syntax transpilation. A full typecheck, unit-test run, and production build could not be completed in this environment because `npm install` timed out while reaching the npm registry. Run `npm install`, `npm run typecheck`, `npm test`, and `npm run build` locally before deploying.
